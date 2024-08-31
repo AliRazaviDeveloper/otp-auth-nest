@@ -25,7 +25,9 @@ export class AuthGuard implements CanActivate {
     if (!verified) {
       throw new UnauthorizedException('token is invalid');
     }
-    const user = await this.authService.findUser(verified.id);
+    const user = await this.authService.findUser({
+      id: verified.id,
+    });
     if (!user) {
       throw new UnauthorizedException('Unauthorized');
     }
