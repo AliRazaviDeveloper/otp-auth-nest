@@ -8,5 +8,9 @@ export default () => {
       username: process.env.DB_USER,
       database: process.env.DB_DATABASE,
     },
+    jwt: {
+      accessToken: process.env.JWT_ACCESS_TOKEN_SECRET,
+      refreshToken: process.env.JWT_REFRESH_TOKEN_SECRET,
+    },
   };
 };

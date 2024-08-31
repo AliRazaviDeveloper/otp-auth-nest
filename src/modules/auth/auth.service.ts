@@ -1,7 +1,7 @@
+import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +11,7 @@ import { OtpEntity } from '../user/entities/otp.entity';
 import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
 import { randomInt } from 'crypto';
 import { UserService } from '../user/user.service.js';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,8 @@ export class AuthService {
     @InjectRepository(OtpEntity)
     private readonly otpRepository: Repository<OtpEntity>,
     private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async sendOtp(sendOtpDto: SendOtpDto) {
@@ -124,8 +127,67 @@ export class AuthService {
     if (!user.verify_at) {
       await this.userService.verifyUser(user.id);
     }
+
+    const accessToken = await this.createTokenWithPayload(
+      {
+        id: user.id,
+        phone: user.phone,
+      },
+      this.configService.get('jwt.accessToken'),
+    );
+
+    const refreshToken = await this.createTokenWithPayload(
+      {
+        id: user.id,
+        phone: user.phone,
+      },
+      this.configService.get('jwt.refreshToken'),
+      '1y',
+    );
+
     return {
+      accessToken,
+      refreshToken,
       message: 'کد شما معتبر است .',
     };
+  }
+
+  private async createTokenWithPayload(
+    payload: { id: number; phone: string },
+    secretKey: string,
+    expiredIn: string = '1d',
+  ) {
+    return await this.jwtService.sign(
+      { id: payload.id, phone: payload.phone },
+      {
+        secret: secretKey,
+        expiresIn: expiredIn,
+      },
+    );
+  }
+
+  async verifyToken(token: string) {
+    try {
+      return await this.jwtService.verify(token, {
+        secret: this.configService.get('jwt.accessToken'),
+      });
+    } catch (error) {
+      throw new UnauthorizedException(error.message);
+    }
+  }
+
+  async findUserById(id: number) {
+    return await this.userRepository.findOne({
+      where: { id },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        phone: true,
+        verify_at: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
   }
 }
