@@ -54,9 +54,6 @@ export class AuthService {
 
   async register(body: RegisterDto) {
     const { phone, email, password, confirmPassword } = body;
-    if (password !== confirmPassword) {
-      throw new BadRequestException('رمز عبور و تکرار آن یکسان نیستند');
-    }
     const findUserWithEmail = await this.findUser({
       email,
     });

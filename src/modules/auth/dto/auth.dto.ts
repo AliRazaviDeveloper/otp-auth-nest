@@ -1,4 +1,5 @@
 import { IsEmail, IsMobilePhone, Length } from 'class-validator';
+import { IsPasswordConfirm } from 'src/common/decorator/confirmPassword.decorator';
 
 export class SendOtpDto {
   @IsMobilePhone('fa-IR')
@@ -27,6 +28,9 @@ export class RegisterDto {
   phone: string;
   @Length(8, 20, { message: 'کلمه عبور 8 تا 20 کاراکتر می باشد' })
   password: string;
+  @IsPasswordConfirm('password', {
+    message: 'کلمه عبور با تکرار آن یکسان نیست',
+  })
   @Length(8, 20, { message: 'تکرار کلمه عبور 8 تا 20 کاراکتر می باشد' })
   confirmPassword: string;
 }
