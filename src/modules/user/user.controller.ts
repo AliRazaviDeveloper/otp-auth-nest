@@ -27,10 +27,6 @@ export class UserController {
 
   @Get('/profile')
   getProfile(@Req() req: Request) {
-    console.log('Salam');
-
-    console.log({ req });
-
     return req.user;
   }
 

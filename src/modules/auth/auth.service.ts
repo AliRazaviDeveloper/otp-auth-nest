@@ -1,14 +1,16 @@
 import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../user/entities/user.entity';
 import { OtpEntity } from '../user/entities/otp.entity';
-import { CheckOtpDto, RegisterDto, SendOtpDto } from './dto/auth.dto';
+import { CheckOtpDto, LoginDto, RegisterDto, SendOtpDto } from './dto/auth.dto';
 import { randomInt } from 'crypto';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
@@ -59,13 +61,13 @@ export class AuthService {
       email,
     });
     if (findUserWithEmail) {
-      throw new BadRequestException('ایمیل وارد شده قبلاً ثبت شده است');
+      throw new ConflictException('ایمیل وارد شده قبلاً ثبت شده است');
     }
     const findUserWithPhone = await this.findUser({
       phone,
     });
     if (findUserWithPhone) {
-      throw new BadRequestException('شماره موبایل وارد شده قبلاً ثبت شده است');
+      throw new ConflictException('شماره موبایل وارد شده قبلاً ثبت شده است');
     }
 
     const hashPassword = await this.hashPasswordService.hashPassword(password);
@@ -77,6 +79,46 @@ export class AuthService {
 
     await this.userRepository.save(user);
     return { message: 'ثبت نام با موفقیت انجام شد' };
+  }
+
+  async login(body: LoginDto) {
+    const { email, password } = body;
+    const user = await this.findUser({ email });
+    console.log(user.phone);
+
+    if (!user) {
+      throw new NotFoundException('کاربری با این ایمیل یافت نشد');
+    }
+
+    const isPasswordValid = await this.hashPasswordService.comparePassword(
+      password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('رمز عبور نادرست است');
+    }
+
+    const accessToken = await this.createTokenWithPayload(
+      {
+        id: user.id,
+        phone: user.phone,
+      },
+      this.configService.get('jwt.accessToken'),
+    );
+    const refreshToken = await this.createTokenWithPayload(
+      {
+        id: user.id,
+        phone: user.phone,
+      },
+      this.configService.get('jwt.refreshToken'),
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      message: 'کاربر با موفقیت وارد اکانت خود شد .',
+    };
   }
 
   private async findOrCreateUser(phone: string): Promise<UserEntity> {
@@ -217,6 +259,7 @@ export class AuthService {
         phone: true,
         email: true,
         verify_at: true,
+        password: true,
         created_at: true,
         updated_at: true,
       },
