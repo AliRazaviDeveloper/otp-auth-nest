@@ -12,5 +12,9 @@ export default () => {
       accessToken: process.env.JWT_ACCESS_TOKEN_SECRET,
       refreshToken: process.env.JWT_REFRESH_TOKEN_SECRET,
     },
+    bcrypt: {
+      salt: parseInt(process.env.BCRYPT_SALT, 10) || 10,
+      hash: process.env.BCRYPT_HASH,
+    },
   };
 };

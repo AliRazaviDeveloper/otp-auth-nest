@@ -20,6 +20,11 @@ export class UserEntity {
   @Column({ nullable: true })
   last_name: string;
 
+  @Column({ nullable: true })
+  email: string;
+  @Column({ nullable: true })
+  password: string;
+
   @Column({ nullable: false, unique: true })
   phone: string;
 
@@ -32,7 +37,7 @@ export class UserEntity {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @Column()
+  @Column({ nullable: true })
   otp_id: number;
 
   @JoinColumn()

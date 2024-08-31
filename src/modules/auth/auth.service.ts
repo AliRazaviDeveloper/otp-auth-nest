@@ -8,10 +8,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../user/entities/user.entity';
 import { OtpEntity } from '../user/entities/otp.entity';
-import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
+import { CheckOtpDto, RegisterDto, SendOtpDto } from './dto/auth.dto';
 import { randomInt } from 'crypto';
-import { UserService } from '../user/user.service.js';
+import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
+import { HashPasswordService } from 'src/common/utils/password';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly hashPasswordService: HashPasswordService,
   ) {}
 
   async sendOtp(sendOtpDto: SendOtpDto) {
@@ -46,6 +48,35 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return { message: 'کد تایید با موفقیت ارسال شد' };
+  }
+
+  async register(body: RegisterDto) {
+    const { phone, email, password, confirmPassword } = body;
+    if (password !== confirmPassword) {
+      throw new BadRequestException('رمز عبور و تکرار آن یکسان نیستند');
+    }
+    const findUserWithEmail = await this.findUser({
+      email,
+    });
+    if (findUserWithEmail) {
+      throw new BadRequestException('ایمیل وارد شده قبلاً ثبت شده است');
+    }
+    const findUserWithPhone = await this.findUser({
+      phone,
+    });
+    if (findUserWithPhone) {
+      throw new BadRequestException('شماره موبایل وارد شده قبلاً ثبت شده است');
+    }
+
+    const hashPassword = await this.hashPasswordService.hashPassword(password);
+    const user = await this.userRepository.create({
+      phone,
+      email,
+      password: hashPassword,
+    });
+
+    await this.userRepository.save(user);
+    return { message: 'ثبت نام با موفقیت انجام شد' };
   }
 
   private async findOrCreateUser(phone: string): Promise<UserEntity> {
@@ -176,14 +207,15 @@ export class AuthService {
     }
   }
 
-  async findUserById(id: number) {
+  async findUser(criteria: { id?: number; email?: string; phone?: string }) {
     return await this.userRepository.findOne({
-      where: { id },
+      where: criteria,
       select: {
         id: true,
         first_name: true,
         last_name: true,
         phone: true,
+        email: true,
         verify_at: true,
         created_at: true,
         updated_at: true,

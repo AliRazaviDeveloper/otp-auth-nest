@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { isJWT } from 'class-validator';
 import { Request } from 'express';
-import { Observable } from 'rxjs';
 import { AuthService } from '../auth.service.js';
 
 @Injectable()
@@ -26,7 +25,7 @@ export class AuthGuard implements CanActivate {
     if (!verified) {
       throw new UnauthorizedException('token is invalid');
     }
-    const user = await this.authService.findUserById(verified.id);
+    const user = await this.authService.findUser(verified.id);
     if (!user) {
       throw new UnauthorizedException('Unauthorized');
     }
